@@ -1477,12 +1477,46 @@ msg_outtrans_one(char_u *p, int attr)
     int
 msg_outtrans_len_attr(char_u *msgstr, int len, int attr)
 {
+    return msg_outtrans_len_attr_regex(msgstr, len, attr, 0);
+}
+
+    char_u *
+match_token(str, len, whacked, grid)
+    char_u *str;
+    int len;
+    int whacked;
+    char_u grid[][16];
+{
+    int gridlen;
+    int i = -1;
+    while (grid[++i][0] != NUL)
+    {
+	gridlen = (int)STRLEN(grid[i]+1);
+	if (whacked && grid[i][1] != '\\')
+	    continue;
+	if (len+1 < gridlen)
+	    continue;
+	if (strncmp(str, grid[i]+1, gridlen))
+	    continue;
+	return grid[i];
+    }
+    return NULL;
+}
+
+    int
+msg_outtrans_len_attr_regex(char_u *msgstr, int len, int attr, int regex)
+{
     int		retval = 0;
     char_u	*str = msgstr;
     char_u	*plain_start = msgstr;
     char_u	*s;
+    int		attr2 = attr;
+    int		attr3 = attr;
+    int		whacked = 0;
+    int		state = 'N'; // Normal, Bracketted, Slashed
     int		mb_l;
     int		c;
+    #include "regex_grid.c"
 
     /* if MSG_HIST flag set, add message to history */
     if (attr & MSG_HIST)
@@ -1533,26 +1567,77 @@ msg_outtrans_len_attr(char_u *msgstr, int len, int attr)
 	else
 	{
 	    s = transchar_byte(*str);
+	    char_u tokentype = '\0';
+	    int tokenlen = 1;
+	    int consumed = 1;
+
 	    if (s[1] != NUL)
 	    {
-		/* unprintable char: print the printable chars so far and the
+		tokenlen = (int)STRLEN(s);
+		tokentype = '^';
+	    }
+	    else
+	    {
+		char_u *token = match_token(str, len, whacked,
+						  state == 'N' ? grid_n
+						: state == 'B' ? grid_b
+						:                grid_s);
+		if (token)
+		{
+		    s = token+1;
+		    tokenlen = STRLEN(s);
+		    tokentype = token[0];
+		    consumed = tokenlen;
+		}
+	    }
+
+	    whacked = !tokentype && *str == '\\';
+	    if (whacked)
+		tokentype = '\\';
+
+	    if (!whacked && !tokentype && state == 'B')
+		tokentype = 'B';
+
+	    if (tokentype)
+	    {
+		/* unprintable char or regex token:
+		 * print the printable chars so far and the token or
 		 * translation of the unprintable char. */
 		if (str > plain_start)
 		    msg_puts_attr_len((char *)plain_start,
-					       (int)(str - plain_start), attr);
-		plain_start = str + 1;
-		msg_puts_attr((char *)s, attr == 0 ? HL_ATTR(HLF_8) : attr);
-		retval += (int)STRLEN(s);
+					       (int)(str - plain_start), attr2);
+		plain_start = str + consumed;
+
+		     if (strchr("^au",      tokentype))
+		    attr3 = HL_ATTR(HLF_8);
+		else if (strchr("nmlr/[]o", tokentype))
+		    attr3 = HL_ATTR(HLF_REGEX);
+		else if (strchr("cB",       tokentype))
+		    attr3 = HL_ATTR(HLF_REGCL);
+		else if (strchr("bpsw\\eg;",tokentype))
+		    attr3 = HL_ATTR(HLF_REGWK);
+		else
+		    attr3 = attr2;
+
+		msg_puts_attr((char *)s, attr3);
+
+		if (state == 'N' && tokentype == '[') // opening [ or \_[
+		    state = 'B';
+		else if (tokentype == '/') // ending slash or qmark
+		    state = 'S';
+		else if (state =='B' && tokentype == ']')
+		    state = 'N';
 	    }
-	    else
-		++retval;
-	    ++str;
+
+	    retval += tokenlen;
+	    str += consumed;
+	    len -= consumed - 1;
 	}
     }
 
     if (str > plain_start)
 	/* print the printable chars at the end */
-	msg_puts_attr_len((char *)plain_start, (int)(str - plain_start), attr);
+	msg_puts_attr_len((char *)plain_start, (int)(str - plain_start), attr2);
 
     return retval;
 }

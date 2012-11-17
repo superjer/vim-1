@@ -34,6 +34,7 @@ int msg_outtrans_attr(char_u *str, int attr);
 int msg_outtrans_len(char_u *str, int len);
 char_u *msg_outtrans_one(char_u *p, int attr);
 int msg_outtrans_len_attr(char_u *msgstr, int len, int attr);
+int msg_outtrans_len_attr_regex(char_u *msgstr, int len, int attr, int regex);
 void msg_make(char_u *arg);
 int msg_outtrans_special(char_u *strstart, int from);
 char_u *str2special_save(char_u *str, int is_lhs);

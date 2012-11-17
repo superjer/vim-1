@@ -3263,11 +3263,11 @@ draw_cmdline(int start, int len)
 	    }
 	}
 
-	msg_outtrans_len(arshape_buf, newlen);
+	msg_outtrans_len_attr_regex(arshape_buf, newlen, 0, 1);
     }
     else
 #endif
-	msg_outtrans_len(ccline.cmdbuff + start, len);
+	msg_outtrans_len_attr_regex(ccline.cmdbuff + start, len, 0, 1);
 }
 
 /*

@@ -6955,6 +6955,12 @@ static char *(highlight_init_light[]) = {
 #ifdef FEAT_GUI
     "Normal gui=NONE",
 #endif
+    CENT("RegexSpecial ctermfg=Blue",
+	 "RegexSpecial ctermfg=Blue guifg=Blue"),
+    CENT("RegexClass ctermfg=Yellow",
+	 "RegexClass ctermfg=Yellow guifg=Yellow"),
+    CENT("RegexWhack ctermfg=Gray",
+	 "RegexWhack ctermfg=Gray guifg=Gray"),
 #ifdef FEAT_TERMINAL
     CENT("StatusLineTerm term=reverse,bold cterm=bold ctermfg=White ctermbg=DarkGreen",
 	 "StatusLineTerm term=reverse,bold cterm=bold ctermfg=White ctermbg=DarkGreen gui=bold guifg=bg guibg=DarkGreen"),
